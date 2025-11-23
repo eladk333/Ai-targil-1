@@ -204,16 +204,14 @@ class WateringProblem(search.Problem):
                     dist = abs(robot_pos[0] - plant_pos[0]) + abs(robot_pos[1] - plant_pos[1])
                     if dist < min_distance:
                         min_distance = dist
-                    
+
+        # If no robot has water                  
         robots_without_water = []
         for robot in robots:            
             if robot[3] == 0:
                 robots_without_water.append(robot)
-
-        # ----------------------------
-        # HERE
-        # ----------------------------
-        # If no robot has water
+       
+        # Just to be safe
         if robots_without_water and filled_taps and thirsty_plants:
              for robot in robots_without_water:
                 robot_pos = (robot[1], robot[2])
@@ -222,6 +220,7 @@ class WateringProblem(search.Problem):
                 dist_to_tap = float('inf')
                 best_tap_pos = None
                 
+                # Find closest tap to this robot
                 for tap in filled_taps:
                     tap_pos = (tap[0], tap[1])
                     # We do Manhattan distance cause we in grid
@@ -233,19 +232,18 @@ class WateringProblem(search.Problem):
                 # Find closest plant to that specific tap
                 if best_tap_pos:
                     dist_tap_to_plant = float('inf')
-                    for p in thirsty_plants:
-                        p_loc = (p[0], p[1])
-                        d = abs(best_tap_pos[0] - p_loc[0]) + abs(best_tap_pos[1] - p_loc[1])
-                        if d < dist_tap_to_plant:
-                            dist_tap_to_plant = d
+                    for plant in thirsty_plants:
+                        plant_pos = (plant[0], plant[1])
+                        distance = abs(best_tap_pos[0] - plant_pos[0]) + abs(best_tap_pos[1] - plant_pos[1])
+                        if distance < dist_tap_to_plant:
+                            dist_tap_to_plant = distance
                     
                     total_trip = dist_to_tap + dist_tap_to_plant
-                    if total_trip < min_dist:
-                        min_dist = total_trip
-
-        # If we found a valid distance, add it
-        if min_dist != float('inf'):
-            cost += min_dist
+                    if total_trip < min_distance:
+                        min_distance = total_trip
+        
+        if min_distance != float('inf'):
+            cost += min_distance
             
         return cost
         
@@ -253,7 +251,43 @@ class WateringProblem(search.Problem):
     def h_gbfs(self, node):
         """ This is the heuristic. It gets a node (not a state)
         and returns a goal distance estimate"""
-        return 0
+        
+        weight = 10
+        robots, taps, plants = node.state
+
+        total_water_needed = sum(p[2] for p in plants)
+        if total_water_needed == 0:
+            return 0
+        
+        score = total_water_needed * weight
+
+        min_distance = float('inf')
+        thirsty_plants = [p for p in plants if p[2] > 0]
+        robots_with_water = [r for r in robots if r[3] > 0]
+        filled_taps = [t for t in taps if t[2] > 0]
+
+        # If we have water, how far is the plant?
+        if robots_with_water:
+            for r in robots_with_water:
+                for p in thirsty_plants:
+                    d = abs(r[1] - p[0]) + abs(r[2] - p[1])
+                    if d < min_distance:
+                        min_distance = d
+        
+        # If we don't have water, how far is the tap?
+        # (Simplified: just get to a tap!)
+        else:
+            for r in robots:
+                for t in filled_taps:
+                    d = abs(r[1] - t[0]) + abs(r[2] - t[1])
+                    if d < min_dist:
+                        min_dist = d
+        
+        if min_dist != float('inf'):
+            score += min_dist
+
+        return score
+
 
 
 def create_watering_problem(game):
