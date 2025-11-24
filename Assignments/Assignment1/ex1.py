@@ -251,40 +251,55 @@ class WateringProblem(search.Problem):
     def h_gbfs(self, node):
         """ This is the heuristic. It gets a node (not a state)
         and returns a goal distance estimate"""
-        
-        weight = 10
+                
         robots, taps, plants = node.state
+        weight = 10
 
-        total_water_needed = sum(p[2] for p in plants)
+        total_water_needed = 0
+        for plant in plants:
+            total_water_needed += plant[2]
+
+        # Goal state                
         if total_water_needed == 0:
             return 0
         
         score = total_water_needed * weight
 
         min_distance = float('inf')
-        thirsty_plants = [p for p in plants if p[2] > 0]
-        robots_with_water = [r for r in robots if r[3] > 0]
-        filled_taps = [t for t in taps if t[2] > 0]
 
-        # If we have water, how far is the plant?
+        thirsty_plants = []
+        for plant in plants:
+            if plant[2] > 0:
+                thirsty_plants.append(plant)
+
+        robots_with_water = []
+        for robot in robots:
+            if robot[3] > 0:
+                robots_with_water.append(robot)
+
+        filled_taps = []
+        for tap in taps:
+            if tap[2] > 0:
+                filled_taps.append(tap)
+
+        # If we have a robot with water what is the min distance for the thirsty plant
         if robots_with_water:
             for r in robots_with_water:
                 for p in thirsty_plants:
-                    d = abs(r[1] - p[0]) + abs(r[2] - p[1])
-                    if d < min_distance:
-                        min_distance = d
+                    temp = abs(r[1] - p[0]) + abs(r[2] - p[1])
+                    if temp < min_distance:
+                        min_distance = temp
         
-        # If we don't have water, how far is the tap?
-        # (Simplified: just get to a tap!)
+        # If we don't have a robot with water what is the min distance to the next tap
         else:
             for r in robots:
                 for t in filled_taps:
-                    d = abs(r[1] - t[0]) + abs(r[2] - t[1])
-                    if d < min_dist:
-                        min_dist = d
+                    temp = abs(r[1] - t[0]) + abs(r[2] - t[1])
+                    if temp < min_distance:
+                        min_distance = temp
         
-        if min_dist != float('inf'):
-            score += min_dist
+        if min_distance != float('inf'):
+            score += min_distance
 
         return score
 

@@ -207,13 +207,15 @@ problem7 = {
 
 def main():
     start = time.time()    
-    problem = [problem1,
-               problem2,
-               problem3,
-               problem4,
-               problem5_deadend,
-               problem6,
-               problem7]    
+    problem = [
+    problem1,
+    problem2,
+    problem3,
+    problem4,
+    problem5_deadend,
+    problem6,
+    problem7,  
+]  
     for p in problem:
         for a in ['astar','gbfs']:
             solve_problems(p, a)
