@@ -1,1 +1,5 @@
 watering_visualization.html
+*.pyc
+*.pyo
+*.pyd
+__pycache__/

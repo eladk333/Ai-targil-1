@@ -157,151 +157,161 @@ class WateringProblem(search.Problem):
         """ This is the heuristic. It gets a node (not a state)
         and returns a goal distance estimate"""
         
-        # We make the heuristic estimate to be: 1. the unit of water plants still need + 2. how much the robots needs to load to get it + 3. how much a robots need to travel to it's closest target
+        # We calculate the number of steps by how many pour and load actions the robots need.
+        # And then we add we the maximum distance of all the robots needs to do to water all the plants.
 
         robots, taps, plants = node.state
 
-        total_water_needed = sum(p[2] for p in plants)
-        current_robot_holding = sum(r[3] for r in robots)
+        # First le'ts  calculate the cost of all pour and load operations the robots needs to do
 
-        if total_water_needed == 0:
-            return 0
-        
-        # 1. How much water the plants still need
-        cost = total_water_needed
+        total_water_to_deliver = 0
+        plants_needing_water_pos = []
 
-        # 2. How much water the robots need to load
-        total_need_load = max(0, total_water_needed - current_robot_holding)
-        cost += total_need_load
+        # Go over all the plants checks how much water the plants need and what is their pos
+        for plant in plants:            
+            if plant[2] > 0:
+                total_water_to_deliver += plant[2]
+                plants_needing_water_pos.append((plant[0], plant[1]))
+
+        # Check if we in goal state
+        if total_water_to_deliver == 0:
+            return 0                
         
-        # 3. how much a robots need to travel to it's closest target
-        min_distance = float('inf')
-        
-        thirsty_plants = []
-        for p in plants:
-            if p[2] > 0:
-                thirsty_plants.append(p)
-        
-        filled_taps = []
-        for t in taps:
-            if t[2] > 0:
-                filled_taps.append(t)
-        
-        # If robot has water his distance is to the closests thirdsty plant
-        robots_with_water = []
+        sum_water_on_robots = 0
         for robot in robots:
-            # r is (id, row, col, load) -> index 3 is load
-            if robot[3] > 0:
-                robots_with_water.append(robot)
-        
-        # Checks we actually atleast a robot and a plant for this case
-        if len(robots_with_water) > 0 and len(thirsty_plants) > 0:
-            for robot in robots_with_water:
-                robot_pos = (robot[1], robot[2])
-                for plant in thirsty_plants:
-                    plant_pos = (plant[0], plant[1])
-                    # We do Manhattan distance cause we in grid
-                    dist = abs(robot_pos[0] - plant_pos[0]) + abs(robot_pos[1] - plant_pos[1])
-                    if dist < min_distance:
-                        min_distance = dist
+            sum_water_on_robots = sum_water_on_robots + robot[3]
 
-        # If no robot has water                  
-        robots_without_water = []
-        for robot in robots:            
-            if robot[3] == 0:
-                robots_without_water.append(robot)
-       
-        # Just to be safe
-        if robots_without_water and filled_taps and thirsty_plants:
-             for robot in robots_without_water:
-                robot_pos = (robot[1], robot[2])
-                
-                # Find closest tap to this robot
-                dist_to_tap = float('inf')
-                best_tap_pos = None
-                
-                # Find closest tap to this robot
-                for tap in filled_taps:
-                    tap_pos = (tap[0], tap[1])
-                    # We do Manhattan distance cause we in grid
-                    distance = abs(robot_pos[0] - tap_pos[0]) + abs(robot_pos[1] - tap_pos[1])
-                    if distance < dist_to_tap:
-                        dist_to_tap = distance
-                        best_tap_pos = tap_pos
-                
-                # Find closest plant to that specific tap
-                if best_tap_pos:
-                    dist_tap_to_plant = float('inf')
-                    for plant in thirsty_plants:
-                        plant_pos = (plant[0], plant[1])
-                        distance = abs(best_tap_pos[0] - plant_pos[0]) + abs(best_tap_pos[1] - plant_pos[1])
-                        if distance < dist_tap_to_plant:
-                            dist_tap_to_plant = distance
-                    
-                    total_trip = dist_to_tap + dist_tap_to_plant
-                    if total_trip < min_distance:
-                        min_distance = total_trip
+        cost_of_pour_actions = total_water_to_deliver
+        cost_of_load_actions = total_water_to_deliver - sum_water_on_robots
+        if cost_of_load_actions < 0:
+            cost_of_load_actions = 0        
+
+        # Second let's calcualte the cost of all the movement the robots needs to do
         
-        if min_distance != float('inf'):
-            cost += min_distance
-            
-        return cost
+        taps_with_water = []
+        for tap in taps:
+            if tap[2] >0:
+                taps_with_water.append((tap[0], tap[1]))
         
+        # Checks if there is a solution
+        if cost_of_load_actions >0 and not taps_with_water:
+            return float('inf')
+        
+        max_min_distance = 0
+
+        for plant_pos in plants_needing_water_pos:
+            plant_row, plant_col = plant_pos
+            min_distance_for_this_plant = float('inf')
+
+            for robot in robots:
+                robot_row, robot_col, robot_load = robot[1], robot[2], robot[3]
+                distance_robot_to_the_plant = abs(robot_row - plant_row) + abs(robot_col - plant_col)
+
+                # If robot has water
+                if robot_load > 0:
+                    if distance_robot_to_the_plant < min_distance_for_this_plant:
+                        min_distance_for_this_plant = distance_robot_to_the_plant 
+                else:
+                    if taps_with_water:
+                        for tap_row, tap_col in taps_with_water:
+                            distance_robot_tap = abs(robot_row - tap_row) + abs(robot_col - tap_col)
+                            distance_tap_plant = abs(tap_row - plant_row) + abs(tap_col - plant_col)
+                            total_trip = distance_robot_tap + distance_tap_plant
+
+                            if total_trip < min_distance_for_this_plant:
+                                    min_distance_for_this_plant = total_trip
+
+                                   
+            if min_distance_for_this_plant != float('inf'):
+                    max_min_distance = max(max_min_distance, min_distance_for_this_plant)
+
+        return cost_of_pour_actions + cost_of_load_actions + max_min_distance
+
+
+
 
     def h_gbfs(self, node):
         """ This is the heuristic. It gets a node (not a state)
         and returns a goal distance estimate"""
-                
+        
         robots, taps, plants = node.state
-        weight = 10
+        
+        # --- Constants for Weighted Priorities ---
+        # Huge weight: Getting a plant watered is the ultimate goal.
+        WEIGHT_TOTAL_WATER_NEEDED = 1000  
+        # Medium weight: A robot carrying water is much better than an empty one.
+        WEIGHT_EMPTY_ROBOT_PENALTY = 50 
+        # Small weight: Movement cost (Manhattan distance).
+        WEIGHT_DISTANCE_TO_TARGET = 1 
 
-        total_water_needed = 0
+        # 1. Calculate Total Water Missing (The Main Gradient)
+        total_water_units_needed = 0
+        plants_needing_water_coordinates = []
+        
+        # The plant tuple structure is (row, col, needed_amount)
         for plant in plants:
-            total_water_needed += plant[2]
+            plant_row = plant[0]
+            plant_col = plant[1]
+            plant_needed_amount = plant[2]
+            
+            if plant_needed_amount > 0:
+                total_water_units_needed += plant_needed_amount
+                plants_needing_water_coordinates.append((plant_row, plant_col))
 
-        # Goal state                
-        if total_water_needed == 0:
+        # Optimization: If goal is reached, return 0 immediately
+        if total_water_units_needed == 0:
             return 0
+
+        # 2. Calculate Robot Scores
+        # We sum the "inefficiency" of all robots.
+        total_robot_heuristic_score = 0
         
-        score = total_water_needed * weight
-
-        min_distance = float('inf')
-
-        thirsty_plants = []
-        for plant in plants:
-            if plant[2] > 0:
-                thirsty_plants.append(plant)
-
-        robots_with_water = []
-        for robot in robots:
-            if robot[3] > 0:
-                robots_with_water.append(robot)
-
-        filled_taps = []
+        # Pre-calculate active taps to avoid re-looping
+        # The tap tuple structure is (row, col, amount)
+        taps_with_water_coordinates = []
         for tap in taps:
-            if tap[2] > 0:
-                filled_taps.append(tap)
+            tap_row = tap[0]
+            tap_col = tap[1]
+            tap_amount = tap[2]
+            if tap_amount > 0:
+                taps_with_water_coordinates.append((tap_row, tap_col))
 
-        # If we have a robot with water what is the min distance for the thirsty plant
-        if robots_with_water:
-            for r in robots_with_water:
-                for p in thirsty_plants:
-                    temp = abs(r[1] - p[0]) + abs(r[2] - p[1])
-                    if temp < min_distance:
-                        min_distance = temp
-        
-        # If we don't have a robot with water what is the min distance to the next tap
-        else:
-            for r in robots:
-                for t in filled_taps:
-                    temp = abs(r[1] - t[0]) + abs(r[2] - t[1])
-                    if temp < min_distance:
-                        min_distance = temp
-        
-        if min_distance != float('inf'):
-            score += min_distance
+        for robot in robots:
+            # The robot tuple structure is (id, row, col, load)
+            robot_row = robot[1]
+            robot_col = robot[2]
+            robot_load = robot[3]
+            
+            # --- CASE A: Robot has water ---
+            # It should go to the closest plant that needs it.
+            if robot_load > 0 and plants_needing_water_coordinates:
+                # Manhattan distance to closest thirsty plant
+                minimum_distance = min(
+                    abs(robot_row - plant_target_row) + abs(robot_col - plant_target_col) 
+                    for (plant_target_row, plant_target_col) in plants_needing_water_coordinates
+                )
+                total_robot_heuristic_score += (minimum_distance * WEIGHT_DISTANCE_TO_TARGET)
 
-        return score
+            # --- CASE B: Robot is empty ---
+            # It should go to the closest tap.
+            elif robot_load == 0:
+                # Apply penalty for being empty to encourage LOADING actions
+                total_robot_heuristic_score += WEIGHT_EMPTY_ROBOT_PENALTY
+                
+                if taps_with_water_coordinates:
+                    # Manhattan distance to closest water source
+                    minimum_distance = min(
+                        abs(robot_row - tap_target_row) + abs(robot_col - tap_target_col) 
+                        for (tap_target_row, tap_target_col) in taps_with_water_coordinates
+                    )
+                    total_robot_heuristic_score += (minimum_distance * WEIGHT_DISTANCE_TO_TARGET)
+                else:
+                    # Dead end: No water in robot and no water in taps.
+                    # Add massive penalty to push search away from this branch.
+                    total_robot_heuristic_score += 10000
+
+        # Final Score Formula
+        return (total_water_units_needed * WEIGHT_TOTAL_WATER_NEEDED) + total_robot_heuristic_score
 
 
 
