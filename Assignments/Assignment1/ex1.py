@@ -236,19 +236,17 @@ class WateringProblem(search.Problem):
         
         robots, taps, plants = node.state
         
-        # --- Constants for Weighted Priorities ---
-        # Huge weight: Getting a plant watered is the ultimate goal.
+        # Giving big weight to watering plants
         WEIGHT_TOTAL_WATER_NEEDED = 1000  
-        # Medium weight: A robot carrying water is much better than an empty one.
+        # Giving some weight but not to big for empty robots to encourage loading
         WEIGHT_EMPTY_ROBOT_PENALTY = 50 
-        # Small weight: Movement cost (Manhattan distance).
+        # Small weight for distance to target
         WEIGHT_DISTANCE_TO_TARGET = 1 
 
         # 1. Calculate Total Water Missing (The Main Gradient)
         total_water_units_needed = 0
         plants_needing_water_coordinates = []
         
-        # The plant tuple structure is (row, col, needed_amount)
         for plant in plants:
             plant_row = plant[0]
             plant_col = plant[1]
@@ -258,16 +256,14 @@ class WateringProblem(search.Problem):
                 total_water_units_needed += plant_needed_amount
                 plants_needing_water_coordinates.append((plant_row, plant_col))
 
-        # Optimization: If goal is reached, return 0 immediately
+        # If we reached goal state
         if total_water_units_needed == 0:
             return 0
 
         # 2. Calculate Robot Scores
-        # We sum the "inefficiency" of all robots.
         total_robot_heuristic_score = 0
         
-        # Pre-calculate active taps to avoid re-looping
-        # The tap tuple structure is (row, col, amount)
+        # We precalculate active taps to avoid re-looping
         taps_with_water_coordinates = []
         for tap in taps:
             tap_row = tap[0]
@@ -277,40 +273,36 @@ class WateringProblem(search.Problem):
                 taps_with_water_coordinates.append((tap_row, tap_col))
 
         for robot in robots:
-            # The robot tuple structure is (id, row, col, load)
             robot_row = robot[1]
             robot_col = robot[2]
             robot_load = robot[3]
             
-            # --- CASE A: Robot has water ---
-            # It should go to the closest plant that needs it.
+            # If robot has water it should go to the closest plant that needs water
             if robot_load > 0 and plants_needing_water_coordinates:
-                # Manhattan distance to closest thirsty plant
+                # Distance to closest plant that needs water
                 minimum_distance = min(
                     abs(robot_row - plant_target_row) + abs(robot_col - plant_target_col) 
                     for (plant_target_row, plant_target_col) in plants_needing_water_coordinates
                 )
                 total_robot_heuristic_score += (minimum_distance * WEIGHT_DISTANCE_TO_TARGET)
 
-            # --- CASE B: Robot is empty ---
-            # It should go to the closest tap.
+            # If robot has not ware it shold go to the closest tap that has water
             elif robot_load == 0:
-                # Apply penalty for being empty to encourage LOADING actions
+                # We add penatly for robot being empty to encourage loading
                 total_robot_heuristic_score += WEIGHT_EMPTY_ROBOT_PENALTY
                 
                 if taps_with_water_coordinates:
-                    # Manhattan distance to closest water source
+                    # Distance to closest tap that has water
                     minimum_distance = min(
                         abs(robot_row - tap_target_row) + abs(robot_col - tap_target_col) 
                         for (tap_target_row, tap_target_col) in taps_with_water_coordinates
                     )
                     total_robot_heuristic_score += (minimum_distance * WEIGHT_DISTANCE_TO_TARGET)
                 else:
-                    # Dead end: No water in robot and no water in taps.
-                    # Add massive penalty to push search away from this branch.
+                    # We got to a dead end so we add a big penatly to avoid this branch
                     total_robot_heuristic_score += 10000
 
-        # Final Score Formula
+        # Final heuristic value
         return (total_water_units_needed * WEIGHT_TOTAL_WATER_NEEDED) + total_robot_heuristic_score
 
 
