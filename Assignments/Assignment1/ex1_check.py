@@ -20,14 +20,13 @@ def run_problem(func, targs=(), kwargs=None):
 # check_problem: problem, search_method, timeout
 # timeout_exec: search_method, targs=[problem], timeout_duration=timeout
 def solve_problems(problem, algorithm):
-    
-
     try:
         p = ex1.create_watering_problem(problem)
     except Exception as e:
         print("Error creating problem: ", e)
         return None
 
+    start_time = time.time()
     if algorithm == "gbfs":
         result = run_problem((lambda p: search.greedy_best_first_graph_search(p, p.h_gbfs)),targs=[p])
     else:
@@ -39,6 +38,16 @@ def solve_problems(problem, algorithm):
         print(len(solution), solution)
     else:
         print("no solution")
+        
+    end_time = time.time()
+    elapsed_time = end_time - start_time
+    
+    # --- CHANGED: Check for > 30 seconds and print RED if true ---
+    if elapsed_time > 30:
+        # \033[91m is Red, \033[0m is Reset
+        print(f"\033[91m[{algorithm}] time: {elapsed_time:.4f} seconds (TIMEOUT!)\033[0m")
+    else:
+        print(f"[{algorithm}] time: {elapsed_time:.4f} seconds")
 
 
 
@@ -494,18 +503,18 @@ def main():
         problem6,
         problem7,
         problem_hard1,
-         problem_hard2,
-        # problem_hard3,
-        # problem_hard4,
-        # problem_hard5,
-         problem_hard6,
-        # problem_load,
-        # problem_10x10_single,
-        # problem_12x12_snake,
+        problem_hard2,
+        problem_hard3,
+        problem_hard4,
+        problem_hard5,
+        problem_hard6,
+        problem_load,
+        problem_10x10_single,
+        problem_12x12_snake,
          problem_12x12_snake_hard,
     ]
     for p in problem:
-        for a in ['gbfs']:
+        for a in ['astar','gbfs']:
             solve_problems(p, a)
     end = time.time()
     print('Submission took:', end-start, 'seconds.')

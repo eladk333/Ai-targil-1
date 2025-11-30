@@ -46,6 +46,63 @@ class WateringProblem(search.Problem):
         
         robots, taps, plants = state
         successors = []
+
+        # Pruning if we have a single robot
+        if len(robots) == 1:
+            robot = robots[0]
+            robot_id, robot_row, robot_col, robot_load = robot
+            robot_cap = self.robot_capacities[robot_id]
+
+            # If robot has water we try to pour
+            if robot_load > 0:
+                # Loop over plants to check if we are standing on one
+                for i, plant in enumerate(plants):
+                    plant_row, plant_col, plant_needed = plant
+                    # If we are standing on a plant that needs water
+                    if plant_row == robot_row and plant_col == robot_col and plant_needed > 0:      
+                        # We pour                  
+                        new_needed = plant_needed - 1
+                        new_load = robot_load - 1
+                        
+                        # Update the robot
+                        new_robot = (robot_id, robot_row, robot_col, new_load)
+                        new_robots = (new_robot,) # Tuple of 1 robot
+                        
+                        # Update Plants
+                        new_plants_list = list(plants)
+                        new_plants_list[i] = (plant_row, plant_col, new_needed)
+                        
+                        # And pack the new state
+                        new_state = (new_robots, taps, tuple(new_plants_list))
+                        
+                        # We return only this acftion pruning all other moves
+                        return [(f"POUR{{{robot_id}}}", new_state)]
+
+            # If robot isn't full check for load            
+            if robot_load < robot_cap:
+                # Loop throuhg our taps
+                for i, tap in enumerate(taps):
+                    tap_row, tap_col, tap_amount = tap
+                    # If we are standing on a tap that has water
+                    if tap_row == robot_row and tap_col == robot_col and tap_amount > 0:  
+                        # We load                      
+                        new_amount = tap_amount - 1
+                        new_load = robot_load + 1
+                        
+                        # Update robot
+                        new_robot = (robot_id, robot_row, robot_col, new_load)
+                        new_robots = (new_robot,)
+                        
+                        # Update taps
+                        new_taps_list = list(taps)
+                        new_taps_list[i] = (tap_row, tap_col, new_amount)
+                        
+                        # Pack new state
+                        new_state = (new_robots, tuple(new_taps_list), plants)
+                        
+                        # Return only this action pruning all other moves
+                        return [(f"LOAD{{{robot_id}}}", new_state)]
+
         robot_locations = set((r[1], r[2]) for r in robots) # Store the positino of each robot
         # Movement action:
         moves = [
