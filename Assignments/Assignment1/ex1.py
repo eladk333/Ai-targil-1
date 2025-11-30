@@ -5,7 +5,9 @@ import utils
 id = ["322587064"]
 
 
-
+# Disclaimer:
+# I used AI to help me gather information about this course meterial and certain concepts as well as python syntax.
+# Also I used the help of Ori Susan a fellow student for the idea of pruning when there is a single robot.
 
 
 class WateringProblem(search.Problem):
