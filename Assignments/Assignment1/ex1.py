@@ -54,6 +54,7 @@ class WateringProblem(search.Problem):
             robot = robots[0]
             robot_id, robot_row, robot_col, robot_load = robot
             robot_cap = self.robot_capacities[robot_id]
+            total_water_needed = sum(p[2] for p in plants)
 
             # If robot has water we try to pour
             if robot_load > 0:
@@ -81,7 +82,7 @@ class WateringProblem(search.Problem):
                         return [(f"POUR{{{robot_id}}}", new_state)]
 
             # If robot is empty check for load            
-            if robot_load == 0:
+            if robot_load < robot_cap and robot_load < total_water_needed:
                 # Loop throuhg our taps
                 for i, tap in enumerate(taps):
                     tap_row, tap_col, tap_amount = tap
