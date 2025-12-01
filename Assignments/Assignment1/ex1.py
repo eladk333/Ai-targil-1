@@ -81,7 +81,7 @@ class WateringProblem(search.Problem):
                         # We return only this acftion pruning all other moves
                         return [(f"POUR{{{robot_id}}}", new_state)]
 
-            # If robot is empty check for load            
+            # If we have space for more water and still need more water we take it           
             if robot_load < robot_cap and robot_load < total_water_needed:
                 # Loop throuhg our taps
                 for i, tap in enumerate(taps):
