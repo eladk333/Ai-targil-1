@@ -80,7 +80,7 @@ class WateringProblem(search.Problem):
                         # We return only this acftion pruning all other moves
                         return [(f"POUR{{{robot_id}}}", new_state)]
 
-            # If robot isn't full check for load            
+            # If robot is empty check for load            
             if robot_load == 0:
                 # Loop throuhg our taps
                 for i, tap in enumerate(taps):
