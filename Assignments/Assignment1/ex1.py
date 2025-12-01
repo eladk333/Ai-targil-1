@@ -81,7 +81,7 @@ class WateringProblem(search.Problem):
                         return [(f"POUR{{{robot_id}}}", new_state)]
 
             # If robot isn't full check for load            
-            if robot_load < robot_cap:
+            if robot_load == 0:
                 # Loop throuhg our taps
                 for i, tap in enumerate(taps):
                     tap_row, tap_col, tap_amount = tap
